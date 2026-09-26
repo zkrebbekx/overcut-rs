@@ -1,0 +1,29 @@
+[package]
+name = "overcut-infrastructure"
+description = "Adapters of the overcut F1 Fantasy toolkit: HTTP gateways, JSON file store, system clock"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+overcut-domain = { workspace = true }
+overcut-application = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+wiremock = { workspace = true }
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
