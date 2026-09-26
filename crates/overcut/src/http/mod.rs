@@ -313,7 +313,8 @@ mod tests {
         let (app, _dir) = app();
         let (status, body) = get_json(app, "/api/backtest?sims=50").await;
         assert_eq!(status, StatusCode::OK);
-        assert!(body["rounds"].is_array());
+        // The Go backtest report is untagged, so its keys are capitalised.
+        assert!(body["Rounds"].is_array());
     }
 
     #[tokio::test]

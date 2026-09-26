@@ -331,18 +331,24 @@ pub struct ReviewView {
     pub hindsight_points: f64,
 }
 
-/// One predicted price change.
+/// One predicted price change. The JSON names are the Go struct field
+/// names, because the Go type carries no tags.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PricePredictionView {
     /// The identifier.
+    #[serde(rename = "AssetID")]
     pub asset_id: String,
     /// The display name.
+    #[serde(rename = "Name")]
     pub name: String,
     /// "driver" or "constructor".
+    #[serde(rename = "Kind")]
     pub kind: String,
     /// The current price.
+    #[serde(rename = "Price")]
     pub price: f64,
     /// The predicted change in millions.
+    #[serde(rename = "Change")]
     pub change: f64,
 }
 
@@ -350,14 +356,19 @@ pub struct PricePredictionView {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PriceBacktestView {
     /// The count of predicted movements.
+    #[serde(rename = "Examples")]
     pub examples: usize,
     /// The mean absolute error in millions.
+    #[serde(rename = "MAE")]
     pub mae: f64,
     /// The error of the always-zero prediction.
+    #[serde(rename = "NaiveMAE")]
     pub naive_mae: f64,
     /// The sign hit rate on the moves that happened.
+    #[serde(rename = "Direction")]
     pub direction: f64,
     /// The count of nonzero actual moves.
+    #[serde(rename = "Moves")]
     pub moves: usize,
 }
 
@@ -374,38 +385,65 @@ pub struct PricesView {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub struct RoundResultView {
+    #[serde(rename = "Round")]
     pub round: u32,
+    #[serde(rename = "Name")]
     pub name: String,
+    #[serde(rename = "DriverMAE")]
     pub driver_mae: f64,
+    #[serde(rename = "ConsMAE")]
     pub cons_mae: f64,
+    #[serde(rename = "SpearmanRho")]
     pub spearman_rho: f64,
+    #[serde(rename = "GridDriverMAE")]
     pub grid_driver_mae: f64,
+    #[serde(rename = "GridSpearmanRho")]
     pub grid_spearman_rho: f64,
+    #[serde(rename = "GridTeamPts")]
     pub grid_team_pts: f64,
+    #[serde(rename = "Coverage")]
     pub coverage: f64,
+    #[serde(rename = "GridCoverage")]
     pub grid_coverage: f64,
+    #[serde(rename = "ModelTeamPts")]
     pub model_team_pts: f64,
+    #[serde(rename = "NaiveTeamPts")]
     pub naive_team_pts: f64,
+    #[serde(rename = "HindsightTeamPts")]
     pub hindsight_team_pts: f64,
 }
 
-/// The pooled backtest.
+/// The pooled backtest. The JSON names are the Go struct field names.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub struct BacktestView {
+    #[serde(rename = "Rounds")]
     pub rounds: Vec<RoundResultView>,
+    #[serde(rename = "DriverMAE")]
     pub driver_mae: f64,
+    #[serde(rename = "ConsMAE")]
     pub cons_mae: f64,
+    #[serde(rename = "MeanSpearman")]
     pub mean_spearman: f64,
+    #[serde(rename = "BaselinePrev")]
     pub baseline_prev: f64,
+    #[serde(rename = "BaselineSeason")]
     pub baseline_season: f64,
+    #[serde(rename = "GridDriverMAE")]
     pub grid_driver_mae: f64,
+    #[serde(rename = "GridMeanSpearman")]
     pub grid_mean_spearman: f64,
+    #[serde(rename = "GridTeamPts")]
     pub grid_team_pts: f64,
+    #[serde(rename = "Coverage")]
     pub coverage: f64,
+    #[serde(rename = "GridCoverage")]
     pub grid_coverage: f64,
+    #[serde(rename = "ModelTeamPts")]
     pub model_team_pts: f64,
+    #[serde(rename = "NaiveTeamPts")]
     pub naive_team_pts: f64,
+    #[serde(rename = "HindsightTeamPts")]
     pub hindsight_team_pts: f64,
 }
 
