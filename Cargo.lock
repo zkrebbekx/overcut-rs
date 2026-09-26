@@ -989,6 +989,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "overcut-codec"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "overcut-domain",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "overcut-domain"
 version = "0.1.0"
 dependencies = [
@@ -1006,6 +1017,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "overcut-application",
+ "overcut-codec",
  "overcut-domain",
  "regex",
  "reqwest",
@@ -1016,6 +1028,20 @@ dependencies = [
  "tokio",
  "tracing",
  "wiremock",
+]
+
+[[package]]
+name = "overcut-wasm"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "js-sys",
+ "overcut-application",
+ "overcut-codec",
+ "overcut-domain",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
 ]
 
 [[package]]

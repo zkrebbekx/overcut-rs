@@ -7,29 +7,37 @@ rule, and where each concept from the Go original lives.
 
 ## The dependency rule
 
-The workspace has four crates. Each crate is one layer. A crate depends
-only on the crates inside it.
+The workspace has six crates. Each crate is one layer or one front end. A
+crate depends only on the crates below it.
 
 ```
-+---------------------------------------------------------------+
-| overcut (interface)        CLI (clap), HTTP API (axum), wiring |
-|  +----------------------------------------------------------+ |
-|  | overcut-infrastructure   HTTP gateways, JSON file store   | |
-|  |  +-----------------------------------------------------+ | |
-|  |  | overcut-application   use cases, ports, DTOs        | | |
-|  |  |  +-----------------------------------------------+  | | |
-|  |  |  | overcut-domain      rules, season, projection, |  | | |
-|  |  |  |                     optimizer, pricing, backtest| | | |
-|  |  |  +-----------------------------------------------+  | | |
-|  |  +-----------------------------------------------------+ | |
-|  +----------------------------------------------------------+ |
-+---------------------------------------------------------------+
++--------------------------------+   +-----------------------------------+
+| overcut (interface)            |   | overcut-wasm (interface)          |
+| CLI (clap), HTTP API (axum)    |   | wasm-bindgen exports              |
+|  +--------------------------+  |   |                                   |
+|  | overcut-infrastructure   |  |   |                                   |
+|  | HTTP gateways, file store|  |   |                                   |
+|  +--------------------------+  |   |                                   |
++--------------------------------+   +-----------------------------------+
+        |                |                        |          |
+        v                v                        v          v
++-----------------------------+   +--------------------------------------+
+| overcut-codec               |   | overcut-application                  |
+| season JSON <-> domain      |   | use cases, ports, DTOs               |
++-----------------------------+   +--------------------------------------+
+        |                                          |
+        v                                          v
++-------------------------------------------------------------------------+
+| overcut-domain   rules, season, projection, optimizer, pricing, backtest |
++-------------------------------------------------------------------------+
 ```
 
 Cargo enforces the rule. `overcut-domain` has no workspace dependency.
-`overcut-application` depends on the domain only. `overcut-infrastructure`
-depends on the application and the domain. The binary crate depends on all
-three and does the wiring.
+`overcut-application` and `overcut-codec` depend on the domain only.
+`overcut-infrastructure` depends on the application, the codec, and the
+domain. The two interface crates depend on what they wire: the binary on
+all of the above, the WebAssembly crate on the application and the codec
+only, because a browser has no file system and no HTTP client of its own.
 
 The domain has no I/O and no `serde`. It cannot read a file, call an API,
 or print. Every side effect goes through a port.
@@ -100,22 +108,26 @@ provider stays inside its adapter. Two examples:
 - The fantasy feed labels the sprint race "Sprint Qualifying". The adapter
   adds both labels into the sprint points.
 
+## The codec
+
+`overcut-codec` turns the `Season` aggregate into JSON text and back. The
+format is the file format of the Go toolkit, so the committed data file
+loads without conversion. The domain types have no `serde`; the codec
+defines private records that mirror the file format and maps them to and
+from the domain. The crate has no I/O, so the file store and the
+WebAssembly build share it.
+
 ## The infrastructure
 
 Each adapter is one module with its own error type. HTTP adapters use
 `reqwest` with a 30-second timeout and map every failure to a
-`GatewayError`. The file store keeps the exact JSON format of the Go
-version, so the committed data file loads without conversion. The store
+`GatewayError`. The file store wraps the codec with an atomic write: it
 writes to a temporary file and renames it, so a crash never leaves a
 half-written season.
 
-The domain types have no `serde`. The file store defines private DTOs that
-mirror the file format and maps them to and from the domain. This keeps
-the file format and the domain model free to change on their own.
-
 ## The interface
 
-The binary crate has two entry points that call the same use cases:
+Three entry points call the same use cases:
 
 - `cli`: one `clap` subcommand per use case. Output goes through
   `tabwriter` for aligned tables.
@@ -123,6 +135,11 @@ The binary crate has two entry points that call the same use cases:
   use cases run in `spawn_blocking`. Errors map to JSON `{"error": ...}`
   with 400 for a client error, 502 for a gateway failure, and 500
   otherwise.
+- `overcut-wasm`: `wasm-bindgen` exports that take and return JSON text.
+  The engine lives in a `thread_local!` cell because WebAssembly runs on
+  one thread. The clock comes from JavaScript, because `chrono` cannot
+  read the clock on `wasm32-unknown-unknown`. The React app runs the
+  module inside a Web Worker so the UI never blocks.
 
 ## From Go to Rust
 

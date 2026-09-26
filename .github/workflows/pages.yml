@@ -1,0 +1,68 @@
+name: pages
+
+# Build the static site: the React app, the Rust engine as WebAssembly, and
+# the committed season data. Nothing leaves the browser when it runs.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/app/package-lock.json
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build the WebAssembly engine
+        run: wasm-pack build crates/wasm --release --target no-modules --out-dir ../../web/engine --out-name overcut
+
+      - name: Build the site
+        working-directory: web/app
+        env:
+          VITE_STATIC: "1"
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: |
+          npm ci
+          npm run build -- --outDir ../site --emptyOutDir
+
+      - name: Add the engine and the season data
+        run: |
+          mkdir -p web/site/engine web/site/data
+          cp web/engine/overcut.js web/engine/overcut_bg.wasm web/site/engine/
+          cp fixtures/season2026.json web/site/data/season.json
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: web/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

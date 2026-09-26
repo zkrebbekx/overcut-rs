@@ -1,0 +1,61 @@
+name: sync
+
+# Refresh the season data from the public sources when a session has just
+# ended, or when the data is a day old. The check runs every hour; the
+# sync itself only runs when `overcut sync --when-due` says it is due. A
+# data commit made with the Actions token does not trigger other
+# workflows, so the job starts the pages build explicitly.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Sync even when not due
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Sync
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            cargo run --release -p overcut -- sync --data fixtures/season2026.json
+          else
+            cargo run --release -p overcut -- sync --when-due --data fixtures/season2026.json
+          fi
+      - name: Commit if changed
+        id: commit
+        run: |
+          # The synced_at stamp changes every run; only commit when the
+          # results, prices, or points moved.
+          if git diff --quiet -I '"synced_at"' -- fixtures/season2026.json; then
+            echo "no data change"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "overcut-sync"
+          git config user.email "overcut-sync@users.noreply.github.com"
+          git add fixtures/season2026.json
+          git commit -m "data: sync season"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Deploy the site
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

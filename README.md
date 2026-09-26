@@ -7,6 +7,12 @@ account. No subscription.
 overcut answers one question on a race weekend: **given my team, what
 should I do this round, and how confident should I be?**
 
+**Use it in the browser: https://zkrebbekx.github.io/overcut-rs/**
+
+The hosted site runs the Rust engine compiled to WebAssembly inside a Web
+Worker. Nothing leaves your browser. A scheduled workflow syncs the season
+data every hour when a session has just ended and redeploys the site.
+
 This repository exists for two reasons:
 
 1. It is a complete, working toolkit. It reads the same data file as the Go
@@ -14,6 +20,10 @@ This repository exists for two reasons:
 2. It is a reference for domain-driven design and clean architecture in
    Rust. Every layer is its own crate. The compiler enforces the dependency
    rule. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+The same domain and application crates serve three front ends: the CLI,
+the local JSON API, and the WebAssembly build. The WebAssembly engine is
+617 KB; the Go build of the same engine was 5.7 MB.
 
 ## What it does
 
@@ -67,7 +77,7 @@ overcut backtest
 overcut hindsight --round 12
 overcut review --round 12 --team GAS,COL,HUL,ANT,LIN,Mercedes,Ferrari
 overcut sync --when-due                            # only when a session just ended
-overcut serve --ui path/to/web/dist                # serve the React UI from the Go repo
+overcut serve --ui web/dist                        # serve the React UI (see Web UI)
 ```
 
 Every command accepts `--data PATH`, `--season YEAR`, and `--rules PATH`.
@@ -92,6 +102,30 @@ offline from that file and is deterministic for a given seed.
 The routes and JSON shapes match the Go service. The React UI from the Go
 repository works against this server without a change.
 
+## Web UI
+
+The React app lives in `web/app`. It is the same app as the Go version
+with one change: the worker loads the wasm-bindgen module.
+
+```bash
+# Local API mode: the app proxies /api to the Rust server.
+overcut serve &
+cd web/app && npm ci && npm run dev
+
+# Static mode: the engine runs in the browser.
+rustup target add wasm32-unknown-unknown
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+wasm-pack build crates/wasm --release --target no-modules --out-dir ../../web/engine --out-name overcut
+cd web/app && VITE_STATIC=1 npm run build -- --outDir ../site --emptyOutDir
+mkdir -p ../site/engine ../site/data
+cp ../engine/overcut.js ../engine/overcut_bg.wasm ../site/engine/
+cp ../../fixtures/season2026.json ../site/data/season.json
+python3 -m http.server -d ../site 8090
+```
+
+`.github/workflows/pages.yml` runs the same steps and publishes `web/site`
+to GitHub Pages on every push to `main`.
+
 ## Read the code
 
 The crates are small. Read them in this order to see how Rust expresses
@@ -108,10 +142,12 @@ the design.
 | `crates/application/src/usecases/context.rs` | `Arc` and `RwLock` for shared state. Compute outside the lock. |
 | `crates/application/src/usecases/optimize_team.rs` | A use case that composes domain services and returns a view. |
 | `crates/application/src/ports/` | `#[async_trait]` ports with source-agnostic records. |
-| `crates/infrastructure/src/file_store.rs` | Private serde DTOs mapped to a serde-free domain. Atomic file write. |
+| `crates/codec/src/lib.rs` | Private serde DTOs mapped to a serde-free domain. No I/O, so the file store and the WebAssembly build share it. |
+| `crates/infrastructure/src/file_store.rs` | Atomic file write around the codec. |
 | `crates/infrastructure/src/jolpica.rs` | An async HTTP adapter with pagination and lenient parsing. |
 | `crates/overcut/src/http/` | An `axum` router, `spawn_blocking`, and error mapping to status codes. |
 | `crates/overcut/src/cli/` | `clap` derive with subcommands. |
+| `crates/wasm/src/lib.rs` | `wasm-bindgen` exports, a `thread_local!` engine cell, and the JavaScript clock. |
 
 Tests follow Given/When/Then. A test module is the "given", and each test
 function is one "when ... then". Run them with `cargo test --workspace`.
@@ -134,6 +170,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all -- --check
 cargo doc --workspace --no-deps --open
+cargo check -p overcut-wasm --target wasm32-unknown-unknown
 ```
 
 CI runs the same four commands on every push and pull request.
