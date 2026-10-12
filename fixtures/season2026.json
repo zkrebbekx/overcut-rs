@@ -1,6 +1,6 @@
 {
   "season": 2026,
-  "synced_at": "2026-10-12T07:22:50.739186212Z",
+  "synced_at": "2026-10-12T17:56:43.733188680Z",
   "rounds": [
     {
       "round": 1,
@@ -8012,7 +8012,7 @@
           "active": true,
           "price": 6.4,
           "old_price": 5.8,
-          "ownership": 51.0,
+          "ownership": 52.0,
           "points": 0.0,
           "quali_pts": 0.0,
           "sprint_pts": 0.0,
@@ -10980,7 +10980,7 @@
           "active": true,
           "price": 10.0,
           "old_price": 9.4,
-          "ownership": 45.0,
+          "ownership": 44.0,
           "points": 0.0,
           "quali_pts": 0.0,
           "sprint_pts": 0.0,
